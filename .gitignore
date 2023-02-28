@@ -1,0 +1,142 @@
+# These are some examples of commonly ignored file patterns.
+# You should customize this list as applicable to your project.
+# Learn more about .gitignore:
+#     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
+
+
+# ignore extracted files
+/data/**
+!/data/*.zip
+
+# dbt folders not needed in repo
+dbt_packages
+target
+
+# Ignore Mac DS_Store files
+.DS_Store
+**/.DS_Store
+
+# test query
+test_query.sql
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Translations
+*.mo
+*.pot
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# virtualenv
+.venv*
+venv*
+ENV/
+
+# Spyder project settings
+.spyderproject
+
+# PyCharm
+.idea/
+*.iml
+
+# Visual Studio Code
+.vscode/
+
+# vim
+*.swp
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Git stuff
+# Kubernetes generated templated files
+*.generated
+*.tar.gz
+scripts/ci/kubernetes/kube/.generated/airflow.yaml
+scripts/ci/kubernetes/docker/requirements.txt
+
+# Needed for CI Dockerfile.ci build system
+.build
+/tmp
+/files
+
+/hive_scratch_dir/
+/.bash_aliases
+/.bash_history
+/.kube
+/.inputrc
+log.txt*
+
+# Provider-related ignores
+/provider_packages/CHANGELOG.txt
+/provider_packages/MANIFEST.in
+/airflow/providers/__init__.py
+
+# Docker context files
+/docker-context-files/*
+!/docker-context-files/.README.md
+
+# Might be generated when you build wheels
+pip-wheel-metadata
+.pypirc
+/.docs-venv
+
+# Dev files
+/dev/packages.txt
+/dev/Dockerfile.pmc
+
+# Generated UI licenses
+licenses/LICENSES-ui.txt
+
+# Generated out dir
+/out
