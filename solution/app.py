@@ -6,7 +6,7 @@ from pendulum import now
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame as SDF
 from pyspark.sql.types import StructType, ArrayType, MapType
-from pyspark.sql.functions import from_json, col, explode_outer, map_keys, from_json, lit, avg, count, round, sum, when
+from pyspark.sql.functions import from_json, col, explode_outer, map_keys, from_json, lit, avg, count, round, sum, when, size
 from zipfile import ZipFile
 from pathlib import Path
 
@@ -116,6 +116,21 @@ def unzip_file(file_path: str, file: str) -> None:
         zObject.extractall(file_path)
 
 
+def explode_user_token(df: SDF) -> SDF:
+    # Get Schema from Token Column
+    json_col_list = df.select("user_token").rdd.flatMap(lambda x: x)
+    schema_ddl = spark.read.json(json_col_list)._jdf.schema()
+    # Read column with proper schema
+    mapped_df = df.withColumn("user_token",
+                              from_json("user_token", schema=schema_ddl))
+    # Select all columns
+    parsed_df = (mapped_df
+                 .select("*", col("user_token.*"))
+                 .drop(col("user_token")))
+
+    return parsed_df
+
+
 def get_data(path_to_json: str) -> SDF:
 
     logger.info("Getting JSON files")
@@ -124,17 +139,9 @@ def get_data(path_to_json: str) -> SDF:
     # Flatten Dataframe
     logger.info("Flattening Dataframe")
     df_flattened = flatten(df)
-    # Get Schema from Token Column
-    json_col_list = df_flattened.select("user_token").rdd.flatMap(lambda x: x)
-    schema_ddl = spark.read.json(json_col_list)._jdf.schema()
-    # Read column with proper schema
-    mapped_df = df_flattened.withColumn("user_token",
-                                        from_json("user_token", schema=schema_ddl))
-    # Select all columns
-    parsed_df = (mapped_df
-                 .select("*", col("user_token.*"))
-                 .drop(col("user_token")))
-
+    # Explode User Token
+    logger.info("Explode User Token")
+    parsed_df = explode_user_token(df_flattened)
     # Deduplication of events based on event ID
     # < Challenge request >
     logger.info("Dedup data")
@@ -143,15 +150,16 @@ def get_data(path_to_json: str) -> SDF:
     return parsed_df
 
 
-def check_col_consent(df: SDF) -> SDF:
-    """Check if column user_consent exists otherwise creates it.
+def get_consent(df: SDF) -> SDF:
+    """Check if user has at least one purposed enabled and if so set 
+    the user_consent as True
 
     Returns:
         SDF: Spark dataframe
     """
-
-    if "user_consent" not in df.columns:
-        df = df.withColumn("user_consent", lit(False))
+    df = (df.withColumn("user_consent",
+                        when((size(col("purposes.enabled")) > 0), True)
+                        .otherwise(False)))
 
     return df
 
@@ -212,6 +220,17 @@ def get_metrics(df: SDF) -> SDF:
     return df_output
 
 
+def write_df_as_parquet(df: SDF, target_dir: str) -> None:
+
+    # Write Dataframe
+    file_timestamp = now().format('YYYYMMDD_HHmmss')
+    filename = f"challenge_{file_timestamp}.parquet"
+    df.write \
+        .format("parquet") \
+        .mode("overwrite") \
+        .save(f'{target_dir}/{filename}')
+
+
 def main():
 
     logger.info("Starting - Challenge")
@@ -228,17 +247,12 @@ def main():
     # Get JSON data
     df = get_data(path_to_raw)
     # Check if consent exists otherwise create column
-    df = check_col_consent(df)
+    df = get_consent(df)
     # Metrics
     df = get_metrics(df)
     df.show()
     # Write Dataframe
-    file_timestamp = now().format('YYYYMMDD_HHmmss')
-    filename = f"challenge_{file_timestamp}.parquet"
-    df.write \
-        .format("parquet") \
-        .mode("overwrite") \
-        .save(f'{path_to_unzip}/challenge.parquet')
+    write_df_as_parquet(df, path_to_unzip)
 
     logger.info(f"Elapsed time: {(time.time() - start_time)} seconds.")
     logger.info("End - Challenge")
